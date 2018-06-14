@@ -1,6 +1,7 @@
 module STQueue
   class Runner # :nodoc:
     QUEUE_PREFIX = :stqueued
+    WRONG_KEY_ERROR = ':key attribute is incorrect'.freeze
 
     class << self
       def start(params = {})
@@ -8,48 +9,50 @@ module STQueue
       end
 
       def stop(queue_name)
-        binding.pry
-        return if STQueue.monitor.stopped? queue_name
-        pid = STQueue.monitor.pid(queue_name)
-        system("kill #{pid}")
+        pid = STQueue.monitor.pop(queue_name)
+        `kill #{pid}`
       end
     end
 
     def initialize(params)
-      @key = [QUEUE_PREFIX, params[:key].to_s].join('_')
-      @key = params[:key].map!(&:to_s).unshift(QUEUE_PREFIX).join('_') if params[:key].is_a? Array
+      @key_object     = params[:key]
       @queue_to_start = params[:queue_name]
     end
 
     def start
-      return queue_name if STQueue.monitor.running? queue_name
-      kill_similar
-      pid = Open4.popen4(command).first
+      return queue_name if STQueue.monitor.running?(queue_name)
+      pid = run_and_get_pid
       raise Error, 'Cannot get PID of Sidekiq process' if pid.blank?
-      STQueue.monitor.save(queue_name, pid)
+      STQueue.monitor.push(queue_name, pid)
       queue_name
     end
 
     private
 
-    attr_reader :key, :queue_to_start
+    attr_reader :queue_to_start, :key_object
 
-    def kill_similar
-      similar = STQueue.monitor.similar(queue_name)
-      return if similar.blank?
-      similar.each { |pid| system("kill #{pid}") }
-    end
-
-    def command
-      "$(which sidekiq) -d -c #{ENV['STQUEUE_THREADS'] || 1} -q #{queue_name} -L #{log_file_path}"
+    def run_and_get_pid
+      `$(which sidekiq) -c #{ENV['STQUEUE_THREADS'] || 1} -q #{queue_name} >> #{log_file_path} 2>&1 &
+        echo $!`.to_i
     end
 
     def queue_name
       @_queue_name ||= queue_to_start || key.to_s
     end
 
+    def key
+      case key_object
+      when Array
+        key_object.map!(&:to_s).unshift(QUEUE_PREFIX).join('_')
+      when String, Symbol
+        [QUEUE_PREFIX, key_object.to_s].join('_')
+      else
+        raise Error, WRONG_KEY_ERROR
+      end
+    end
+
     def check_logs_dir
-      return if Dir.exist? STQueue.log_dir
+      return if Dir.exist?(STQueue.log_dir)
       FileUtils.mkdir(STQueue.log_dir)
     end
 
