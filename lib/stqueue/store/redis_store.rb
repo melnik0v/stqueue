@@ -1,8 +1,6 @@
 module STQueue
   module Store
-    class RedisStore # :nodoc:
-      include STQueue::Store
-
+    class RedisStore < Base # :nodoc:
       CONNECT_KEY = :stqueue_redis_store
 
       def initialize

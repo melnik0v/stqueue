@@ -1,8 +1,6 @@
 module STQueue
   module Store
-    class FileStore # :nodoc:
-      include STQueue::Store
-
+    class FileStore < Base # :nodoc:
       def initialize
         super
         FileUtils.touch(pids_file) unless File.exist?(pids_file)

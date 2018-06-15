@@ -2,9 +2,7 @@
 
 module STQueue
   module Store
-    extend ActiveSupport::Concern
-
-    included do
+    class Base # :nodoc:
       def initialize
         @queues = {}
       end

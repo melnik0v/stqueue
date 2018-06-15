@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'pry'
 raise 'Rails is not defined' unless defined? ::Rails
 
 require "english"
@@ -8,7 +7,7 @@ require 'stqueue/version'
 require 'stqueue/error'
 require 'stqueue/runner'
 require 'stqueue/monitor'
-require 'stqueue/store'
+require 'stqueue/store/base'
 require 'stqueue/store/redis_store'
 require 'stqueue/store/file_store'
 require 'stqueue/base'
@@ -17,8 +16,8 @@ module STQueue # :nodoc:
   SIDEKIQ_IS_NOT_CONNECTED = 'Check that your Rails app using Sidekiq as default ActiveJob adapter'.freeze
   WRONG_STORE_TYPE         = 'Wrong store type'.freeze
   WRONG_LOG_DIR_TYPE_ERROR = 'STQueue log_dir must be a `Pathname`. Use `Rails.root.join(...)` to define it.'.freeze
-  AVAILABLE_STORES         = %i[redis file].freeze
   QUEUE_PREFIX             = 'stqueue'.freeze
+  AVAILABLE_STORES         = %i[redis file].freeze
 
   @config = ::OpenStruct.new
 
