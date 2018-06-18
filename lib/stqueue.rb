@@ -2,7 +2,7 @@
 
 raise 'Rails is not defined' unless defined? ::Rails
 
-require "english"
+require "English"
 require 'stqueue/version'
 require 'stqueue/error'
 require 'stqueue/runner'
