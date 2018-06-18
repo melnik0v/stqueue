@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-raise 'Rails is not defined' unless defined? ::Rails
-
 require "English"
 require 'stqueue/version'
 require 'stqueue/error'
@@ -13,7 +11,6 @@ require 'stqueue/store/file_store'
 require 'stqueue/base'
 
 module STQueue # :nodoc:
-  SIDEKIQ_IS_NOT_CONNECTED = 'Check that your Rails app using Sidekiq as default ActiveJob adapter'.freeze
   WRONG_STORE_TYPE         = 'Wrong store type'.freeze
   WRONG_LOG_DIR_TYPE_ERROR = 'STQueue log_dir must be a `Pathname`. Use `Rails.root.join(...)` to define it.'.freeze
   QUEUE_PREFIX             = 'stqueue'.freeze
@@ -26,8 +23,8 @@ module STQueue # :nodoc:
 
     def configure
       yield self
-      return unless STQueue.enabled
-      raise Error, SIDEKIQ_IS_NOT_CONNECTED unless sidekiq_connected?
+      enabled &&= !Rails.env.test?
+      return unless enabled && defined?(::Rails) && sidekiq_connected?
       monitor.health_check
     end
 
@@ -45,7 +42,7 @@ module STQueue # :nodoc:
 
     def monitor
       return unless STQueue.enabled
-      @_monitor ||= STQueue::Monitor.new
+      @monitor ||= STQueue::Monitor.new
     end
 
     def store=(store_type)
