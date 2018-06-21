@@ -32,7 +32,7 @@ module STQueue
         pid
       end
 
-      def load_from
+      def from_json
         @queues = JSON.parse(yield)
       rescue JSON::ParserError, TypeError
         @queues = {}

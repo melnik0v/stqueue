@@ -4,13 +4,10 @@ AllCops:
     - 'spec/**/*.rb'
   Exclude:
     - 'Gemfile'
-    - 'Rakefile'
     - '*.gemspec'
-    - 'gemfiles/vendor/**/*'
-    - 'vendor/**/*'
   DisplayCopNames: true
   StyleGuideCopsOnly: false
-  TargetRubyVersion: 2.2
+  TargetRubyVersion: 2.5.1
 
 Naming/AccessorMethodName:
   Enabled: false

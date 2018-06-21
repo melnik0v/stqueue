@@ -1,56 +1,55 @@
+# frozen_string_literal: true
+
 module STQueue
   class Monitor # :nodoc:
-    delegate :pid, :push, :pop, to: :store
+    WRONG_KEY_ERROR = ':key attribute is incorrect'
 
-    def initialize
-      @store = STQueue.store.new
+    def health_check!
+      kill_processes_with_empty_queues
+      start_processes_with_non_empty_queues
     end
 
-    def health_check
-      restart_stopped
-      check_running
-      stop_empty
+    def separate_by(key)
+      start_processes_with_non_empty_queues
+      queue_name = generate_queue_name(key)
+      Process.find_or_create_by(queue_name: queue_name).queue_name
     end
 
-    def stopped?(queue_name)
-      !running?(queue_name)
-    end
-
-    def running?(queue_name)
-      check_running
-      pid(queue_name).present?
-    end
-
-    def stop_empty
-      store.queues.each do |queue_name, running_pid|
-        size = Sidekiq::Queue.new(queue_name).size
-        next if size.positive? || !pid_really_exists?(running_pid)
-        STQueue::Runner.stop(queue_name)
+    def kill_processes_with_empty_queues
+      return unless STQueue.enabled
+      stqueues.each do |queue|
+        next if queue.size.positive?
+        process = Process.find_by(queue_name: queue.name)
+        next unless process&.running?
+        process.kill
       end
     end
 
-    def restart_stopped
-      store.queues.each do |queue_name, running_pid|
-        size = Sidekiq::Queue.new(queue_name).size
-        next if size.zero? || pid_really_exists?(running_pid)
-        STQueue::Runner.start(queue_name: queue_name)
+    def start_processes_with_non_empty_queues
+      return unless STQueue.enabled
+      stqueues.each do |queue|
+        next if queue.size.zero?
+        process = Process.find_by(queue_name: queue.name)
+        next if process.present? && process.running?
+        Process.create(queue.name)
+      end
+    end
+
+    def generate_queue_name(key)
+      case key
+      when Array
+        key.map!(&:to_s).unshift(STQueue::QUEUE_PREFIX).join('_')
+      when String, Symbol
+        [STQueue::QUEUE_PREFIX, key.to_s].join('_')
+      else
+        raise Error, WRONG_KEY_ERROR
       end
     end
 
     private
 
-    attr_reader :store
-
-    def check_running
-      store.queues.each do |queue_name, running_pid|
-        next if pid_really_exists? running_pid
-        pop(queue_name)
-      end
-    end
-
-    def pid_really_exists?(running_pid)
-      pid_list = `ps -o pid`.split("\n").drop(1).map!(&:strip)
-      pid_list.include? running_pid.to_s
+    def stqueues
+      Sidekiq::Queue.all.select { |q| q.name.match?(STQueue::QUEUE_PREFIX) }
     end
   end
 end

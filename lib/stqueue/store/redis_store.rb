@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module STQueue
   module Store
     class RedisStore < Base # :nodoc:
@@ -5,7 +7,7 @@ module STQueue
 
       def initialize
         super
-        @client = Redis.new
+        @client = Redis.new(url: STQueue.redis_url)
       end
 
       private
@@ -13,7 +15,7 @@ module STQueue
       attr_reader :client
 
       def load
-        load_from { client.get(CONNECT_KEY) }
+        from_json { client.get(CONNECT_KEY) }
       end
 
       def dump

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module STQueue
   module Store
     class FileStore < Base # :nodoc:
@@ -9,7 +11,7 @@ module STQueue
       private
 
       def load
-        load_from { File.read(pids_file) }
+        from_json { File.read(pids_file) }
       end
 
       def dump
@@ -17,7 +19,7 @@ module STQueue
       end
 
       def pids_file
-        Rails.root.join('tmp', 'pids', 'stqueue.pids')
+        STQueue.pids_dir.join('stqueue.pids')
       end
     end
   end
