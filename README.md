@@ -14,7 +14,8 @@ Create an initializer at `config/initializers/stqueue.rb` and add
 ```ruby
   STQueue.configure do |config|
     config.enabled = true
-    config.concurrency = ENV['STQUEUE_CONCURRENCY'] || 1 # default 1
+    # default concurrency for all queues
+    config.concurrency = ENV['STQUEUE_CONCURRENCY'] # default 1
     # log_dir should be a `Pathname`
     config.log_dir = Rails.root.join('log', 'stqueue')
     # store_type can be :file or :redis
@@ -34,15 +35,26 @@ Add
 ```
 to SomeJob
 
-Run Jobs like
+Run Jobs like:
 ```ruby
-  SomeJob.separate_by(key: :some_uniq_key)...other_methods...perform_later(args)
+  SomeJob.separate_by(key: :some_uniq_key, concurrency: 5)...other_methods...perform_later(args)
   # or 
-  SomeJob.separate_by(key: "some_uniq_key_#{model.id}")...other_methods...perform_later(args)
+  SomeJob.separate_by(key: "some_uniq_key_#{model.id}", concurrency: 1)...other_methods...perform_later(args)
+  # or
+  SomeJob.separate_by(key: :some_uniq_key)...other_methods...perform_later(args)
   # or 
   SomeJob.separate_by(key: [model.id, model.name, Date.current])...other_methods...perform_later(args)
 ```
 
+Also you can start and stop processes manually:
+```ruby
+  STQueue::Process.all           # => [#<STQueue::Process:0x00007f965217c1f0 @concurrency=10, @log_file_path...>, ...]
+  STQueue::Process.first         # => #<STQueue::Process:0x00007f965217c1f0 @concurrency=10, @log_file_path...>
+  STQueue::Process.first.kill    # killing the process and return same object with pid = nil
+  STQueue::Process.first.start   # starting the process and return same object with pid
+  STQueue::Process.first.restart # starting the process and return same object with updated pid
+  STQueue::Process.find_by(name: queue_name)
+```
 ## Result
 
 `STQueue` started Sidekiq process for each unique `key`.

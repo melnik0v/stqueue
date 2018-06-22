@@ -4,19 +4,20 @@ module STQueue
   class Process # :nodoc:
     class << self
       def all
-        STQueue.store.queues.map do |name, pid|
-          process = Process.new(pid, name)
-          unless process.running?
-            STQueue.store.pop(name)
-            next
-          end
+        STQueue.store.queues.map do |name, data|
+          process = Process.new(data['pid'], name, data['concurrency'])
+          process.kill if process.pid && !process.running?
           process
-        end.compact
+        end
       end
 
-      def find_or_create_by(pid: nil, queue_name: nil)
+      def first
+        all.first
+      end
+
+      def find_or_initialize_by(pid: nil, queue_name: nil)
         return if queue_name.blank? && pid.blank?
-        find_by(pid: pid, queue_name: queue_name) || create(queue_name)
+        find_by(pid: pid, queue_name: queue_name) || initialize_by(queue_name)
       end
 
       def find_by(pid: nil, queue_name: nil)
@@ -26,39 +27,59 @@ module STQueue
         end
       end
 
-      def create(queue_name)
+      def initialize_by(queue_name, concurrency = STQueue.concurrency)
         return if queue_name.blank?
-        log_file_path = STQueue.log_dir.join("#{queue_name}.log")
-        pid = `bundle exec sidekiq \
-                -c #{STQueue.concurrency} \
-                -q #{queue_name} \
-                >> #{log_file_path} 2>&1 & \
-                echo $!`.to_i
-        STQueue.store.push(queue_name, pid)
-        Sidekiq.logger.info("[STARTING] Sidekiq process for queue '#{queue_name}' with pid '#{pid}'")
-        new(pid, queue_name)
+        new(nil, queue_name, concurrency)
+      end
+
+      def create(queue_name, concurrency = STQueue.concurrency)
+        initialize_by(queue_name, concurrency).start
       end
     end
 
-    attr_reader :pid, :queue_name, :killed
+    attr_reader :pid, :queue_name, :concurrency, :log_file_path
 
-    def initialize(pid, queue_name)
-      @pid        = pid
-      @queue_name = queue_name
-      @killed     = false
+    def initialize(pid, queue_name, concurrency)
+      @pid           = pid
+      @queue_name    = queue_name
+      @concurrency   = concurrency || STQueue.concurrency
+      @log_file_path = STQueue.log_dir.join("#{queue_name}.log")
+    end
+
+    def set(field, value)
+      prev_value = instance_variable_get("@#{field}")
+      return if prev_value == value
+      instance_variable_set("@#{field}", value)
+      restart if field == :concurrency
     end
 
     def running?
-      return false if killed
       `ps -ax -r -o pid`.split("\n").drop(1).map!(&:strip).include?(pid.to_s)
     end
 
     def kill
-      return unless running?
-      @killed = true
+      STQueue.store.null(queue_name)
+      Sidekiq.logger.info("[STOPPING] STQueue for '#{queue_name}' | pid '#{pid}' | concurrency '#{concurrency}'")
       system("kill #{pid}")
-      STQueue.store.pop(queue_name)
-      Sidekiq.logger.info("[STOPPING] Sidekiq process for queue '#{queue_name}' with pid '#{pid}'")
+      @pid = nil
+      self
+    end
+
+    def start
+      return if running?
+      @pid = `bundle exec sidekiq \
+                  -c #{concurrency} \
+                  -q #{queue_name} \
+                  >> #{log_file_path} 2>&1 & \
+                  echo $!`.to_i
+      STQueue.store.replace(queue_name, pid, concurrency)
+      Sidekiq.logger.info("[STARTED] STQueue for '#{queue_name}' | pid '#{pid}' | concurrency '#{concurrency}'")
+      self
+    end
+
+    def restart
+      kill
+      start
     end
   end
 end

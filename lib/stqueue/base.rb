@@ -9,9 +9,9 @@ module STQueue
     end
 
     module ClassMethods # :nodoc:
-      def separate_by(key: nil)
+      def separate_by(key: nil, concurrency: STQueue.concurrency)
         if STQueue.enabled && key.present?
-          queue_name = STQueue.monitor.separate_by(key)
+          queue_name = STQueue.monitor.separate_by(key, concurrency)
           queue_as queue_name.to_sym
         end
         self

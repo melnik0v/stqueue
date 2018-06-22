@@ -13,24 +13,43 @@ module STQueue
       end
 
       def pid(queue_name)
+        return if queue_name.blank?
         load
-        queues[queue_name.to_s]
+        queue = queues[queue_name.to_s]
+        queue.fetch(:pid, nil)
       end
 
-      def push(queue_name, pid)
+      def push(queue_name, pid, concurrency)
         return if queue_name.blank? || pid.blank?
         load
-        queues[queue_name.to_s] = pid.to_i
+        queues[queue_name.to_s] = { pid: pid.to_i, concurrency: concurrency }
         dump
       end
 
       def pop(queue_name)
         return if queue_name.blank?
         load
-        pid = @queues.delete(queue_name.to_s)
+        queue = @queues.delete(queue_name.to_s)
         dump
-        pid
+        return unless queue
+        queue[:pid]
       end
+
+      def null(queue_name)
+        return if queue_name.blank?
+        load
+        queue = queues[queue_name.to_s]
+        return unless queue
+        @queues[queue_name.to_s][:pid] = nil
+        dump
+      end
+
+      def replace(queue_name, pid, concurrency)
+        pop(queue_name)
+        push(queue_name, pid, concurrency)
+      end
+
+      private
 
       def from_json
         @queues = JSON.parse(yield)
