@@ -10,12 +10,10 @@ module STQueue
     end
 
     def separate_by(key, concurrency)
-      start_processes_with_non_empty_queues
       queue_name = generate_queue_name(key)
       process = Process.find_or_initialize_by(queue_name: queue_name)
-      process.set(:concurrency, concurrency)
-      process.start
-      process.queue_name
+      return process.start if process.concurrency == concurrency
+      process.set(:concurrency, concurrency).restart
     end
 
     def kill_processes_with_empty_queues
@@ -23,8 +21,7 @@ module STQueue
       stqueues.each do |queue|
         next if queue.size.positive?
         process = Process.find_by(queue_name: queue.name)
-        next unless process&.running?
-        process.kill
+        process.kill if process&.running?
       end
     end
 
@@ -32,8 +29,7 @@ module STQueue
       return unless STQueue.enabled
       stqueues.each do |queue|
         next if queue.size.zero?
-        process = Process.find_by(queue_name: queue.name)
-        process.present? ? process.start : Process.create(queue.name)
+        Process.find_or_initialize_by(queue_name: queue.name).start
       end
     end
 
