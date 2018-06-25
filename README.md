@@ -57,10 +57,11 @@ Also you can start and stop processes manually:
   STQueue::Process.running       # return all running processes
   STQueue::Process.stopped       # return all stopped processes
   process = STQueue::Process.find_by(name: queue_name)
-  process.kill    # killing the process and return same object with pid = nil
-  process.start   # starting the process and return same object with pid
-  process.restart # restarting the process and return same object with updated pid
-  process.delete  # kill and delete the process and return nil
+  process.running? # => true
+  process.kill     # killing the process and return same object with pid = nil
+  process.start    # starting the process and return same object with pid
+  process.restart  # restarting the process and return same object with updated pid
+  process.delete   # kill and delete the process and return nil
 ```
 
 Run `STQueue.monitor.health_check!` to manually stop processes with empty queues and restart processes with non-empty queues
