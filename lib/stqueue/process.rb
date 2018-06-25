@@ -63,7 +63,7 @@ module STQueue
 
     def running?
       return false if pid.blank?
-      `ps -ax -r -o pid`.split("\n").drop(1).map!(&:strip).include?(pid.to_s)
+      `ps -ax -o pid`.split("\n").drop(1).map!(&:strip).include?(pid.to_s)
     end
 
     def kill
