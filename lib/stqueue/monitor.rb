@@ -5,11 +5,13 @@ module STQueue
     WRONG_KEY_ERROR = ':key attribute is incorrect'
 
     def health_check!
+      return unless STQueue.enabled
       kill_processes_with_empty_queues
       start_processes_with_non_empty_queues
     end
 
     def separate_by(key, concurrency)
+      return unless STQueue.enabled
       queue_name = generate_queue_name(key)
       process = Process.find_or_initialize_by(queue_name: queue_name)
       return process.start if process.concurrency == concurrency

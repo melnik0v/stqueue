@@ -32,14 +32,13 @@ module STQueue # :nodoc:
 
     def init!
       return unless enabled
-      raise Error, WRONG_LOG_DIR_TYPE_ERROR unless log_dir.is_a? Pathname
+      raise Error, WRONG_LOG_DIR_TYPE_ERROR  unless log_dir.is_a? Pathname
       raise Error, WRONG_PIDS_DIR_TYPE_ERROR if store_type == :file && !pids_dir.is_a?(Pathname)
       @config.store = "STQueue::Store::#{store_type.to_s.capitalize}Store".safe_constantize.new
       monitor.health_check!
     end
 
     def monitor
-      return unless enabled
       @monitor ||= STQueue::Monitor.new
     end
 
