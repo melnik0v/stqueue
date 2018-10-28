@@ -6,8 +6,10 @@ module STQueue
 
     def health_check!
       return unless STQueue.enabled
-      kill_processes_with_empty_queues
-      start_processes_with_non_empty_queues
+      stqueues.each do |queue|
+        process = Process.find_or_initialize_by(queue_name: queue.name)
+        process.kill if process.need_to_kill?
+      end
     end
 
     def separate_by(key, concurrency)
@@ -18,28 +20,11 @@ module STQueue
       process.set(:concurrency, concurrency).restart
     end
 
-    def kill_processes_with_empty_queues
-      return unless STQueue.enabled
-      stqueues.each do |queue|
-        next if queue.size.positive?
-        process = Process.find_by(queue_name: queue.name)
-        process.kill if process&.running?
-      end
-    end
-
-    def start_processes_with_non_empty_queues
-      return unless STQueue.enabled
-      stqueues.each do |queue|
-        next if queue.size.zero?
-        Process.find_or_initialize_by(queue_name: queue.name).start
-      end
-    end
-
     def generate_queue_name(key)
       case key
       when Array
         key.map!(&:to_s).unshift(STQueue::QUEUE_PREFIX).join('_')
-      when String, Symbol
+      when String, Symbol, Numeric
         [STQueue::QUEUE_PREFIX, key.to_s].join('_')
       else
         raise Error, WRONG_KEY_ERROR

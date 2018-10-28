@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    stqueue (0.0.4)
+    stqueue (0.0.5)
 
 GEM
   remote: https://rubygems.org/
@@ -14,4 +14,4 @@ DEPENDENCIES
   stqueue!
 
 BUNDLED WITH
-   1.16.2
+   1.16.4

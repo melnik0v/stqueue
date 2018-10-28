@@ -53,9 +53,9 @@ STQueue will generate queue name using `:key` attribute and `stqueued_` prefix, 
 
 Also you can start and stop processes manually:
 ```ruby
-  STQueue::Process.all           # return all processes
-  STQueue::Process.running       # return all running processes
-  STQueue::Process.stopped       # return all stopped processes
+  STQueue::Process.all     # return all processes
+  STQueue::Process.running # return all running processes
+  STQueue::Process.stopped # return all stopped processes
   process = STQueue::Process.find_by(name: queue_name)
   process.running? # => true
   process.kill     # killing the process and return same object with pid = nil
@@ -64,13 +64,11 @@ Also you can start and stop processes manually:
   process.delete   # kill and delete the process and return nil
 ```
 
-Run `STQueue.monitor.health_check!` to manually stop processes with empty queues and restart processes with non-empty queues
+Run `rake stqueue:check` or `STQueue.monitor.health_check!` from code to manually stop processes with empty queues and restart processes with non-empty queues
 
 ## Result
 
 `STQueue` started Sidekiq process for each unique `key`.
- - If some process stopped (but queue is not empty), `STQueue` will restart Sidekiq process and continue working
- - If queue is empty `STQueue` will stop the process
 
 ## Support
 

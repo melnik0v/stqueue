@@ -9,6 +9,7 @@ require 'stqueue/store/base'
 require 'stqueue/store/redis_store'
 require 'stqueue/store/file_store'
 require 'stqueue/base'
+require "stqueue/railtie" if defined?(::Rails)
 
 module STQueue # :nodoc:
   DEFAULT_CONCURRENCY       = 1
@@ -18,11 +19,12 @@ module STQueue # :nodoc:
   WRONG_PIDS_DIR_TYPE_ERROR = 'You should set config.pids_dir as `Pathname`. Use `Rails.root.join(...)` to define it.'
   WRONG_STORE_TYPE          = "Wrong store type. Available store types is #{AVAILABLE_STORES}"
 
-  @config = ::OpenStruct.new(concurrency: 1, redis_url: 'redis://localhost:6379/12')
+  @config = ::OpenStruct.new(concurrency: DEFAULT_CONCURRENCY, redis_url: 'redis://localhost:6379/12')
 
   class << self
     delegate :log_dir, :pids_dir, :store, :store_type=, :store_type, :enabled, :enabled=,
-             :concurrency, :redis_url, :redis_url=, to: :@config
+             :concurrency, :redis_url, :redis_url=,
+             to: :@config
 
     def configure
       yield self
@@ -35,7 +37,6 @@ module STQueue # :nodoc:
       raise Error, WRONG_LOG_DIR_TYPE_ERROR  unless log_dir.is_a? Pathname
       raise Error, WRONG_PIDS_DIR_TYPE_ERROR if store_type == :file && !pids_dir.is_a?(Pathname)
       @config.store = "STQueue::Store::#{store_type.to_s.capitalize}Store".safe_constantize.new
-      monitor.health_check!
     end
 
     def monitor

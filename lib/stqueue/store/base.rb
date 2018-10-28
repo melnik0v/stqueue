@@ -44,9 +44,8 @@ module STQueue
         dump
       end
 
-      def replace(queue_name, pid, concurrency)
-        pop(queue_name)
-        push(queue_name, pid, concurrency)
+      def replace(*args)
+        push(*args)
       end
 
       private

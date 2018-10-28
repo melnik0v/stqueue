@@ -5,12 +5,15 @@ module STQueue
     extend ActiveSupport::Concern
 
     included do
-      after_perform { STQueue.monitor.kill_processes_with_empty_queues }
+      after_perform do
+        process = STQueue::Process.find_by(queue_name: queue_name)
+        process.self_kill if process&.need_to_kill?
+      end
     end
 
     module ClassMethods # :nodoc:
       def separate_by(key: nil, concurrency: STQueue.concurrency)
-        if STQueue.enabled && key.present?
+        if STQueue.enabled && key.present? && concurrency.present?
           process = STQueue.monitor.separate_by(key, concurrency)
           queue_as process.queue_name
         end
