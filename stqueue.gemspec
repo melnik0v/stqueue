@@ -19,4 +19,6 @@ Gem::Specification.new do |gem|
 
   gem.required_ruby_version = '>= 2.2'
   gem.require_paths = %w(lib)
+
+  gem.add_dependency "redlock"
 end

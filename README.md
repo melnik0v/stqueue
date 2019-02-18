@@ -23,7 +23,7 @@ Create an initializer at `config/initializers/stqueue.rb` and add
     config.redis_url = "redis://#{ENV['REDIS_URL']}/12" # default 'redis://localhost:6379/12'
     # or
     config.store_type = :file
-    config.tmp_dir = Rails.root.join('tmp', 'pids') # for file store
+    config.pids_dir = Rails.root.join('tmp', 'pids') # for file store
   end
 ```
 
