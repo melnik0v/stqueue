@@ -10,11 +10,15 @@ require 'stqueue/store/redis_store'
 require 'stqueue/store/file_store'
 require 'stqueue/base'
 require "stqueue/railtie" if defined?(::Rails)
+require 'stqueue/utils'
+require 'redlock'
 
 module STQueue # :nodoc:
   DEFAULT_CONCURRENCY       = 1
   AVAILABLE_STORES          = %i[redis file].freeze
   QUEUE_PREFIX              = 'stqueued'
+  REDLOCK_PREFIX            = 'redlock_stqueue'
+  DEFAULT_TTL               = 2000
   WRONG_LOG_DIR_TYPE_ERROR  = 'You should set config.log_dir as `Pathname`. Use `Rails.root.join(...)` to define it.'
   WRONG_PIDS_DIR_TYPE_ERROR = 'You should set config.pids_dir as `Pathname`. Use `Rails.root.join(...)` to define it.'
   WRONG_STORE_TYPE          = "Wrong store type. Available store types is #{AVAILABLE_STORES}"
@@ -41,6 +45,10 @@ module STQueue # :nodoc:
 
     def monitor
       @monitor ||= STQueue::Monitor.new
+    end
+
+    def lock_manager
+      @lock_manager ||= Redlock::Client.new([ STQueue.redis_url ])
     end
 
     def log_dir=(dir)

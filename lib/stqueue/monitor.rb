@@ -12,23 +12,17 @@ module STQueue
       end
     end
 
+    def clear_store!
+      return unless STQueue.enabled
+      STQueue::Process.all.each(&:delete)
+    end
+
     def separate_by(key, concurrency)
       return unless STQueue.enabled
-      queue_name = generate_queue_name(key)
+      queue_name = Utils.generate_queue_name(key)
       process = Process.find_or_initialize_by(queue_name: queue_name)
       return process.start if process.concurrency == concurrency
       process.set(:concurrency, concurrency).restart
-    end
-
-    def generate_queue_name(key)
-      case key
-      when Array
-        key.map!(&:to_s).unshift(STQueue::QUEUE_PREFIX).join('_')
-      when String, Symbol, Numeric
-        [STQueue::QUEUE_PREFIX, key.to_s].join('_')
-      else
-        raise Error, WRONG_KEY_ERROR
-      end
     end
 
     private
