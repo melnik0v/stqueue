@@ -7,7 +7,7 @@ module STQueue
     included do
       after_perform do
         lock_info = Utils.lock_info(queue_name)
-        unless lock_info
+        until lock_info
           sleep 1
           lock_info = Utils.lock_info(queue_name)
         end
