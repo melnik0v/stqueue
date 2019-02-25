@@ -23,7 +23,7 @@ module STQueue
         return if queue_name.blank?
         load
         queue = queues[queue_name.to_s]
-        queue.fetch('busy', 0)
+        queue.fetch('busy', 0) || 0
       end
 
       def push(queue_name, pid, concurrency, busy)
