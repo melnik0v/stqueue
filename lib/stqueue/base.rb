@@ -6,6 +6,8 @@ module STQueue
 
     included do
       after_perform do
+        return unless STQueue.enabled
+
         lock_info = Utils.lock_info(queue_name)
         until lock_info
           sleep 1
@@ -21,6 +23,8 @@ module STQueue
       end
 
       before_enqueue do
+        return unless STQueue.enabled
+
         STQueue::Process.find_by(queue_name: queue_name).increase_busy
       end
     end
