@@ -56,7 +56,7 @@ Also you can start and stop processes manually:
   STQueue::Process.all     # return all processes
   STQueue::Process.running # return all running processes
   STQueue::Process.stopped # return all stopped processes
-  process = STQueue::Process.find_by(name: queue_name)
+  process = STQueue::Process.find_by(queue_name: 'queue_name')
   process.running? # => true
   process.kill     # killing the process and return same object with pid = nil
   process.start    # starting the process and return same object with pid
