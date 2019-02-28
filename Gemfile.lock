@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    stqueue (0.0.5)
+    stqueue (0.0.9)
 
 GEM
   remote: https://rubygems.org/

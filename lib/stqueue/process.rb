@@ -5,7 +5,7 @@ module STQueue
     class << self
       def all
         STQueue.store.queues.map do |name, data|
-          process = Process.new(data['pid'], name, data['concurrency'], data['busy'])
+          process = Process.new(data['pid'], name, data['concurrency'])
           process.set(:pid, nil) if process.stopped?
           process
         end
@@ -41,7 +41,7 @@ module STQueue
 
       def initialize_by(queue_name: nil, concurrency: STQueue.concurrency)
         return if queue_name.blank?
-        new(nil, queue_name, concurrency, 0)
+        new(nil, queue_name, concurrency)
       end
 
       def create(queue_name, concurrency = STQueue.concurrency)
@@ -49,20 +49,23 @@ module STQueue
       end
 
       def find_by_sidekiq_process(queue_name)
-        sidekiq_process = Sidekiq::ProcessSet.new.find { |process| process['queues'].include?(queue_name.to_s) }
+        sidekiq_process = sidekiq_process(queue_name)
         return if sidekiq_process.blank? || sidekiq_process.stopping?
-        new(sidekiq_process['pid'], queue_name, sidekiq_process['concurrency'], 0)
+        new(sidekiq_process['pid'], queue_name, sidekiq_process['concurrency'])
+      end
+
+      def sidekiq_process(queue_name)
+        Sidekiq::ProcessSet.new.find { |process| process['queues'].include?(queue_name.to_s) }
       end
     end
 
-    attr_reader :pid, :queue_name, :concurrency, :log_file_path, :busy
+    attr_reader :pid, :queue_name, :concurrency, :log_file_path
 
-    def initialize(pid, queue_name, concurrency, busy)
+    def initialize(pid, queue_name, concurrency)
       @pid           = pid
       @queue_name    = queue_name.to_sym
       @concurrency   = concurrency || STQueue.concurrency
       @log_file_path = STQueue.log_dir.join("#{queue_name}.log")
-      @busy          = busy
     end
 
     def set(field, value)
@@ -82,8 +85,11 @@ module STQueue
 
     def need_to_kill?
       jobs_exists = Sidekiq::Queue.all.find { |q| q.name == queue_name.to_s }&.size&.positive?
+      return false if jobs_exists
       retries_exists = !!Sidekiq::RetrySet.new.find { |j| j.queue == queue_name.to_s }
-      return running? && !jobs_exists && !retries_exists && busy.zero?
+      return false if retries_exists
+      workers_count = Sidekiq::Workers.new.count{|_, _, work| work['queue'] == queue_name.to_s} unless jobs_exists
+      running? && !jobs_exists && !retries_exists && workers_count.zero?
     end
 
     def kill
@@ -101,7 +107,7 @@ module STQueue
     end
 
     def save
-      STQueue.store.replace(queue_name, pid, concurrency, busy)
+      STQueue.store.replace(queue_name, pid, concurrency)
       self
     end
 
@@ -125,25 +131,16 @@ module STQueue
     def delete
       kill
       STQueue.store.pop(queue_name)
+      Sidekiq::Queue.new(queue_name).clear
       nil
     end
 
-    def increase_busy
-      busy = STQueue.store.busy(queue_name) + 1
-      set(:busy, busy)
-      save
+    def find_sidekiq_worker
+      Sidekiq::Workers.new.find { |worker| worker['queue'] == queue_name.to_s }
     end
 
-    def decrease_busy
-      busy = STQueue.store.busy(queue_name) - 1
-      set(:busy, busy)
-      save
-    end
-
-    def sidekiq_process
-      Sidekiq::ProcessSet.new.find do |process|
-        process['queues'].include?(queue_name.to_s) && !process.stopping?
-      end
+    def find_sidekiq_process
+      Sidekiq::ProcessSet.new.find { |process| process['queues'].include?(queue_name.to_s) }
     end
   end
 end

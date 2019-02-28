@@ -15,10 +15,6 @@ module STQueue
         end
       end
 
-      def lock_info(queue_name)
-        STQueue.lock_manager.lock(lock_queue_name(queue_name), DEFAULT_TTL)
-      end
-
       private
 
       def lock_queue_name(queue_name)

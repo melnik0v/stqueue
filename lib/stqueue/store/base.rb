@@ -19,17 +19,10 @@ module STQueue
         queue.fetch('pid', nil)
       end
 
-      def busy(queue_name)
-        return if queue_name.blank?
-        load
-        queue = queues[queue_name.to_s]
-        queue.fetch('busy', 0) || 0
-      end
-
-      def push(queue_name, pid, concurrency, busy)
+      def push(queue_name, pid, concurrency)
         return if queue_name.blank? || pid.blank?
         load
-        queues[queue_name.to_s] = { pid: pid.to_i, concurrency: concurrency, busy: busy }
+        queues[queue_name.to_s] = { pid: pid.to_i, concurrency: concurrency }
         dump
       end
 
