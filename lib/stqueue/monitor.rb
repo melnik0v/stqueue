@@ -17,6 +17,11 @@ module STQueue
       STQueue::Process.all.each(&:delete)
     end
 
+    def stop_processes!
+      return unless STQueue.enabled
+      STQueue::Process.all.select(&:need_to_kill?).each(&:delete)
+    end
+
     def separate_by(key, concurrency)
       return unless STQueue.enabled
       queue_name = Utils.generate_queue_name(key)

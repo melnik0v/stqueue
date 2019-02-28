@@ -5,24 +5,7 @@ module STQueue
     extend ActiveSupport::Concern
 
     included do
-      after_perform do
-        lock_info = Utils.lock_info(queue_name)
-        until lock_info
-          sleep 1
-          lock_info = Utils.lock_info(queue_name)
-        end
-        process = STQueue::Process.find_by(queue_name: queue_name)
-        process.decrease_busy
-        STQueue.lock_manager.unlock(lock_info)
-        if process&.need_to_kill?
-          Sidekiq::Queue.new(queue_name).clear
-          process.delete
-        end
-      end
-
-      before_enqueue do
-        STQueue::Process.find_by(queue_name: queue_name).increase_busy if STQueue.enabled
-      end
+      after_perform { STQueue::Monitor.new.stop_processes! }
     end
 
     module ClassMethods # :nodoc:
